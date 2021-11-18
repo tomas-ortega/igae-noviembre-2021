@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  igae-redmine:
+    build:
+      context: ./redmine
+    image: igae/redmine:1.0.0
+    volumes:
+      - igae_redmine:/usr/src/redmine/files
+    environment:
+      - REDMINE_DB_MYSQL=igae_redmine_db
+      - REDMINE_DB_DATABASE=redmine
+      - REDMINE_DB_PORT=3306
+      - REDMINE_DB_USERNAME=igae
+      - REDMINE_DB_PASSWORD=igae
+    restart: always
+    depends_on:
+      - igae-redmine-db
+    ports:
+      - "9000:3000"
+
+  igae-redmine-db:
+    build:
+      context: ./redmine_db
+    image: igae/redmine-db:1.0.0
+    volumes:
+      - igae_redmine_db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=12345
+      - MYSQL_DATABASE=redmine
+      - MYSQL_USER=igae
+      - MYSQL_PASSWORD=igae
+    restart: always
+
+  igae-jenkins:
+    build:
+      context: ./jenkins
+    image: igae/jenkins:1.0.0
+    volumes:
+      - igae_jenkins:/var/jenkins_home
+    ports:
+      - "9001:8080"
+    restart: always
+
+  igae-sonarqube-postgresql:
+    build:
+      context: ./sonarqube_postgresql_db
+    image: igae/sonarqube-postgresql:1.0.0
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+    volumes:
+      - igae_sonarqube_postgresql_db:/var/lib/postgresql
+      - igae_sonarqube_postgresql_data:/var/lib/postgresql/data
+    restart: always
+
+  igae-sonarqube:
+    build:
+      context: ./sonarqube
+    image: igae/sonarqube:1.0.0
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://igae-sonarqube-postgresql:5432/sonar
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+    volumes:
+      - igae_sonarqube_data:/opt/sonarqube/data
+      - igae_sonarqube_extensions:/opt/sonarqube/extensions
+      - igae_sonarqube_logs:/opt/sonarqube/logs
+    ports:
+      - "9002:9000"
+    restart: always
+    depends_on:
+      - igae-sonarqube-postgresql
+  
+  igae-subversion:
+    build:
+      context: ./subversion
+    image: igae/subversion:1.0.0
+    user: root
+    ports:
+      - "9003:3343"
+      - "9004:18080"
+    volumes:
+      - igae_subversion:/opt/csvn/data
+    restart: always
+
+volumes:
+  igae_redmine:
+    name: igae_redmine
+
+  igae_redmine_db:
+    name: igae_redmine_db
+
+  igae_jenkins:
+    name: igae_jenkins
+
+  igae_sonarqube_data:
+    name: igae_sonarqube_data
+
+  igae_sonarqube_logs:
+    name: igae_sonarqube_logs
+
+  igae_sonarqube_extensions:
+    name: igae_sonarqube_extensions
+
+  igae_sonarqube_postgresql_db:
+    name: igae_sonarqube_postgresql_db
+
+  igae_sonarqube_postgresql_data:
+    name: igae_sonarqube_postgresql_data
+
+  igae_subversion:
+    name: igae_subversion
